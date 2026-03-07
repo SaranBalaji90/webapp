@@ -6,116 +6,218 @@
   <title>Webapp Dashboard v2</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
     body {
       font-family: 'Segoe UI', system-ui, sans-serif;
-      min-height: 100vh;
-      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      background: #0f0c29;
       color: #fff;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
+      overflow-x: hidden;
     }
+    /* Scroll progress bar */
+    .progress-bar {
+      position: fixed; top: 0; left: 0; height: 3px; z-index: 100;
+      background: linear-gradient(90deg, #f093fb, #f5576c, #4facfe);
+      width: 0%; transition: width 0.1s;
+    }
+    /* Sections */
+    section {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      position: relative; overflow: hidden;
+    }
+    .hero { background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); }
+    .features { background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460); }
+    .stats { background: linear-gradient(135deg, #0f0c29, #1b1b3a, #24243e); }
+    .cta { background: linear-gradient(135deg, #16213e, #1a1a2e, #0f0c29); }
+    /* Glassmorphism card */
     .card {
-      background: rgba(255,255,255,0.05);
-      backdrop-filter: blur(20px);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 24px;
-      padding: 3rem 4rem;
-      text-align: center;
+      background: rgba(255,255,255,0.05); backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.1); border-radius: 24px;
+      padding: 3rem 4rem; text-align: center;
       box-shadow: 0 25px 50px rgba(0,0,0,0.3);
-      animation: float 3s ease-in-out infinite;
-      position: relative;
-      z-index: 1;
+      position: relative; z-index: 1;
     }
     h1 {
       font-size: 3rem;
       background: linear-gradient(90deg, #f093fb, #f5576c, #4facfe);
-      background-size: 200%;
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      background-size: 200%; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
       animation: shimmer 3s linear infinite;
+    }
+    h2 {
+      font-size: 2.2rem; margin-bottom: 1.5rem;
+      background: linear-gradient(90deg, #4facfe, #00f2fe);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     }
     p { margin-top: 1rem; color: rgba(255,255,255,0.7); font-size: 1.1rem; }
     .badge {
-      display: inline-block;
-      margin-top: 1.5rem;
-      padding: 0.5rem 1.5rem;
-      border-radius: 999px;
-      background: linear-gradient(90deg, #4facfe, #00f2fe);
-      color: #0f0c29;
-      font-weight: 600;
-      font-size: 0.85rem;
+      display: inline-block; margin-top: 1.5rem; padding: 0.5rem 1.5rem;
+      border-radius: 999px; background: linear-gradient(90deg, #4facfe, #00f2fe);
+      color: #0f0c29; font-weight: 600; font-size: 0.85rem;
     }
-    .clock {
-      font-size: 2.5rem;
-      font-weight: 300;
-      margin-top: 1.5rem;
-      letter-spacing: 0.1em;
-      color: rgba(255,255,255,0.9);
-    }
-    .date {
-      font-size: 1rem;
-      color: rgba(255,255,255,0.5);
-      margin-top: 0.3rem;
-    }
-    .info-row {
-      display: flex;
-      gap: 1.5rem;
-      margin-top: 1.5rem;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
+    .clock { font-size: 2.5rem; font-weight: 300; margin-top: 1.5rem; letter-spacing: 0.1em; color: rgba(255,255,255,0.9); }
+    .date { font-size: 1rem; color: rgba(255,255,255,0.5); margin-top: 0.3rem; }
+    .info-row { display: flex; gap: 1.5rem; margin-top: 1.5rem; justify-content: center; flex-wrap: wrap; }
     .info-chip {
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 12px;
-      padding: 0.6rem 1.2rem;
-      font-size: 0.85rem;
-      color: rgba(255,255,255,0.7);
+      background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px; padding: 0.6rem 1.2rem; font-size: 0.85rem; color: rgba(255,255,255,0.7);
     }
-    .orb {
-      position: fixed;
-      border-radius: 50%;
-      filter: blur(80px);
-      opacity: 0.4;
-      animation: drift 8s ease-in-out infinite alternate;
-    }
+    /* Orbs */
+    .orb { position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.4; }
     .orb1 { width: 400px; height: 400px; background: #f093fb; top: -10%; left: -5%; }
-    .orb2 { width: 300px; height: 300px; background: #4facfe; bottom: -10%; right: -5%; animation-delay: 2s; }
-    @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+    .orb2 { width: 300px; height: 300px; background: #4facfe; bottom: -10%; right: -5%; }
+    /* Scroll-reveal elements */
+    .reveal {
+      opacity: 0; transform: translateY(60px);
+      transition: opacity 0.8s ease, transform 0.8s ease;
+    }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+    /* Feature grid */
+    .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; max-width: 900px; padding: 1rem; }
+    .feature-card {
+      background: rgba(255,255,255,0.05); backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.08); border-radius: 16px;
+      padding: 2rem; text-align: center; transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .feature-card:hover { transform: translateY(-8px) scale(1.02); box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+    .feature-icon { font-size: 2.5rem; margin-bottom: 0.8rem; }
+    .feature-card h3 { font-size: 1.1rem; margin-bottom: 0.5rem; }
+    .feature-card p { font-size: 0.9rem; margin-top: 0; }
+    /* Stats */
+    .stat-row { display: flex; gap: 3rem; flex-wrap: wrap; justify-content: center; }
+    .stat { text-align: center; }
+    .stat-num {
+      font-size: 3rem; font-weight: 700;
+      background: linear-gradient(90deg, #f093fb, #4facfe);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .stat-label { color: rgba(255,255,255,0.5); margin-top: 0.3rem; }
+    /* Scroll indicator */
+    .scroll-hint {
+      position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%);
+      animation: bounce 2s infinite; cursor: pointer; font-size: 1.5rem; opacity: 0.6;
+    }
+    /* Particles canvas */
+    #particles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+    /* Parallax mouse-tracking */
+    .parallax-layer { transition: transform 0.15s ease-out; }
     @keyframes shimmer { 0% { background-position: 0%; } 100% { background-position: 200%; } }
-    @keyframes drift { 0% { transform: translate(0,0); } 100% { transform: translate(40px,30px); } }
+    @keyframes bounce { 0%,100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(-12px); } }
   </style>
 </head>
 <body>
-  <div class="orb orb1"></div>
-  <div class="orb orb2"></div>
-  <div class="card">
-    <h1>Hello, World! 🚀</h1>
-    <p>A simple containerized webapp with a fancy UI</p>
-    <div class="clock" id="clock"></div>
-    <div class="date" id="date"></div>
-    <div class="info-row">
-      <span class="info-chip" id="timezone"></span>
-      <span class="info-chip" id="uptime"></span>
+  <div class="progress-bar" id="progressBar"></div>
+  <canvas id="particles"></canvas>
+
+  <section class="hero">
+    <div class="orb orb1 parallax-layer" data-speed="0.03"></div>
+    <div class="orb orb2 parallax-layer" data-speed="0.05"></div>
+    <div class="card parallax-layer" data-speed="0.01">
+      <h1>Hello, World! 🚀</h1>
+      <p>A simple containerized webapp with a fancy UI</p>
+      <div class="clock" id="clock"></div>
+      <div class="date" id="date"></div>
+      <div class="info-row">
+        <span class="info-chip" id="timezone"></span>
+        <span class="info-chip" id="uptime"></span>
+      </div>
+      <span class="badge">Running in K8s</span>
     </div>
-    <span class="badge">Running in K8s</span>
-  </div>
+    <div class="scroll-hint">↓ Scroll</div>
+  </section>
+
+  <section class="features">
+    <div class="reveal">
+      <h2>✨ Features</h2>
+      <div class="feature-grid">
+        <div class="feature-card"><div class="feature-icon">🐳</div><h3>Containerized</h3><p>Runs anywhere with Docker &amp; K8s</p></div>
+        <div class="feature-card"><div class="feature-icon">⚡</div><h3>Fast</h3><p>Served by nginx for speed</p></div>
+        <div class="feature-card"><div class="feature-icon">🎨</div><h3>Glassmorphism</h3><p>Modern frosted-glass design</p></div>
+        <div class="feature-card"><div class="feature-icon">🌊</div><h3>Interactive</h3><p>Parallax, particles &amp; scroll magic</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="stats">
+    <div class="reveal">
+      <h2>📊 Live Stats</h2>
+      <div class="stat-row">
+        <div class="stat"><div class="stat-num" id="statFps">0</div><div class="stat-label">FPS</div></div>
+        <div class="stat"><div class="stat-num" id="statScroll">0</div><div class="stat-label">Scroll %</div></div>
+        <div class="stat"><div class="stat-num" id="statParticles">0</div><div class="stat-label">Particles</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta">
+    <div class="reveal">
+      <div class="card">
+        <h2>🚀 Ready to Deploy</h2>
+        <p>This webapp is container-ready and cloud-native.</p>
+        <span class="badge" style="cursor:pointer" onclick="window.scrollTo({top:0})">Back to Top ↑</span>
+      </div>
+    </div>
+  </section>
+
   <script>
+    // Clock
     const start = Date.now();
-    function update() {
+    function updateClock() {
       const now = new Date();
       document.getElementById('clock').textContent = now.toLocaleTimeString();
-      document.getElementById('date').textContent = now.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      document.getElementById('date').textContent = now.toLocaleDateString(undefined, { weekday:'long', year:'numeric', month:'long', day:'numeric' });
       document.getElementById('timezone').textContent = '🌍 ' + Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const s = Math.floor((Date.now() - start) / 1000);
-      const m = Math.floor(s / 60), h = Math.floor(m / 60);
-      document.getElementById('uptime').textContent = '⏱ Page open ' + (h ? h + 'h ' : '') + (m % 60) + 'm ' + (s % 60) + 's';
+      const s = Math.floor((Date.now() - start) / 1000), m = Math.floor(s / 60), h = Math.floor(m / 60);
+      document.getElementById('uptime').textContent = '⏱ ' + (h ? h + 'h ' : '') + (m % 60) + 'm ' + (s % 60) + 's';
     }
-    update();
-    setInterval(update, 1000);
+    updateClock(); setInterval(updateClock, 1000);
+
+    // Scroll progress bar + reveal
+    function onScroll() {
+      const pct = window.scrollY / (document.body.scrollHeight - innerHeight) * 100;
+      document.getElementById('progressBar').style.width = pct + '%';
+      document.getElementById('statScroll').textContent = Math.round(pct);
+      document.querySelectorAll('.reveal').forEach(el => {
+        if (el.getBoundingClientRect().top < innerHeight * 0.85) el.classList.add('visible');
+      });
+    }
+    addEventListener('scroll', onScroll, { passive: true });
+
+    // Mouse parallax
+    addEventListener('mousemove', e => {
+      const cx = e.clientX - innerWidth / 2, cy = e.clientY - innerHeight / 2;
+      document.querySelectorAll('.parallax-layer').forEach(el => {
+        const s = parseFloat(el.dataset.speed) || 0.02;
+        el.style.transform = `translate(${cx * s}px, ${cy * s}px)`;
+      });
+    });
+
+    // Particles
+    const canvas = document.getElementById('particles'), ctx = canvas.getContext('2d');
+    let particles = [];
+    function resizeCanvas() { canvas.width = innerWidth; canvas.height = innerHeight; }
+    resizeCanvas(); addEventListener('resize', resizeCanvas);
+    for (let i = 0; i < 60; i++) particles.push({ x: Math.random() * innerWidth, y: Math.random() * innerHeight, r: Math.random() * 2 + 0.5, dx: (Math.random() - 0.5) * 0.4, dy: (Math.random() - 0.5) * 0.4, o: Math.random() * 0.5 + 0.2 });
+    let lastTime = performance.now(), frames = 0, fps = 0;
+    function drawParticles(now) {
+      frames++;
+      if (now - lastTime >= 1000) { fps = frames; frames = 0; lastTime = now; document.getElementById('statFps').textContent = fps; }
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach(p => {
+        p.x += p.dx; p.y += p.dy;
+        if (p.x < 0) p.x = canvas.width; if (p.x > canvas.width) p.x = 0;
+        if (p.y < 0) p.y = canvas.height; if (p.y > canvas.height) p.y = 0;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,255,${p.o})`; ctx.fill();
+      });
+      // Draw lines between nearby particles
+      for (let i = 0; i < particles.length; i++)
+        for (let j = i + 1; j < particles.length; j++) {
+          const d = Math.hypot(particles[i].x - particles[j].x, particles[i].y - particles[j].y);
+          if (d < 120) { ctx.beginPath(); ctx.moveTo(particles[i].x, particles[i].y); ctx.lineTo(particles[j].x, particles[j].y); ctx.strokeStyle = `rgba(255,255,255,${0.15 * (1 - d / 120)})`; ctx.stroke(); }
+        }
+      document.getElementById('statParticles').textContent = particles.length;
+      requestAnimationFrame(drawParticles);
+    }
+    requestAnimationFrame(drawParticles);
   </script>
 </body>
 </html>
