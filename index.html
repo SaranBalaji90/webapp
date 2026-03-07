@@ -1,4 +1,3 @@
-<!-- Updated: 2026-03-06T17:42 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -49,6 +48,33 @@
       font-weight: 600;
       font-size: 0.85rem;
     }
+    .clock {
+      font-size: 2.5rem;
+      font-weight: 300;
+      margin-top: 1.5rem;
+      letter-spacing: 0.1em;
+      color: rgba(255,255,255,0.9);
+    }
+    .date {
+      font-size: 1rem;
+      color: rgba(255,255,255,0.5);
+      margin-top: 0.3rem;
+    }
+    .info-row {
+      display: flex;
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .info-chip {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 0.6rem 1.2rem;
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.7);
+    }
     .orb {
       position: fixed;
       border-radius: 50%;
@@ -69,7 +95,27 @@
   <div class="card">
     <h1>Hello, World! 🚀</h1>
     <p>A simple containerized webapp with a fancy UI</p>
-    <span class="badge">Running in K8s</span>
+    <div class="clock" id="clock"></div>
+    <div class="date" id="date"></div>
+    <div class="info-row">
+      <span class="info-chip" id="timezone"></span>
+      <span class="info-chip" id="uptime"></span>
+    </div>
+    <span class="badge">Running in Docker</span>
   </div>
+  <script>
+    const start = Date.now();
+    function update() {
+      const now = new Date();
+      document.getElementById('clock').textContent = now.toLocaleTimeString();
+      document.getElementById('date').textContent = now.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      document.getElementById('timezone').textContent = '🌍 ' + Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const s = Math.floor((Date.now() - start) / 1000);
+      const m = Math.floor(s / 60), h = Math.floor(m / 60);
+      document.getElementById('uptime').textContent = '⏱ Page open ' + (h ? h + 'h ' : '') + (m % 60) + 'm ' + (s % 60) + 's';
+    }
+    update();
+    setInterval(update, 1000);
+  </script>
 </body>
 </html>
