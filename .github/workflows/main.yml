@@ -131,13 +131,6 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           use_bedrock: true
-          prompt: |
-            You are reviewing a pull request. Please:
-            1. Review the code changes for quality, security, and best practices
-            2. Check for potential bugs or issues
-            3. Verify the changes match the requirements
-            4. If everything looks good, end your comment with "✅ LGTM - Ready to merge"
-            5. If there are issues, comment with "@claude <description of what needs to be fixed>"
         env:
           AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
