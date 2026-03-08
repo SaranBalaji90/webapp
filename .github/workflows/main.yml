@@ -155,10 +155,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           use_bedrock: true
           show_full_output: true
-          additional_permissions: |
-            Bash(gh:*)
-            Bash(cat:*)
-            Bash(ls:*)
+          claude_args: "--dangerously-skip-permissions"
           prompt: |
             You are a creative UI/UX improvement agent. Analyze the current state of this web application's HTML, CSS, and any frontend code.
 
