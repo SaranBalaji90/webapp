@@ -154,6 +154,9 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           use_bedrock: true
+          additional_permissions: |
+            gh issue create *
+            gh issue list *
           prompt: |
             You are a creative UI/UX improvement agent. Analyze the current state of this web application's HTML, CSS, and any frontend code.
 
