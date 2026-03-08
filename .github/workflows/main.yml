@@ -28,9 +28,60 @@ jobs:
 
       - name: Claude Code Action
         uses: anthropics/claude-code-action@v1
+        id: claude
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           use_bedrock: true
         env:
           AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
+
+      - name: Create Pull Request
+        if: github.event_name == 'issue_comment'
+        run: |
+          # Get the branch name that Claude created
+          BRANCH=$(git branch -r | grep 'origin/claude/' | sort -r | head -1 | sed 's|origin/||' | tr -d ' ')
+
+          if [ -n "$BRANCH" ]; then
+            git fetch origin
+            git checkout $BRANCH
+
+            # Check if PR already exists
+            EXISTING_PR=$(gh pr list --head $BRANCH --json number --jq '.[0].number')
+
+            if [ -z "$EXISTING_PR" ]; then
+              # Create PR
+              gh pr create \
+                --base main \
+                --head $BRANCH \
+                --title "$(git log -1 --pretty=%s)" \
+                --body "Automated changes by Claude Code in response to issue #${{ github.event.issue.number }}"
+
+              echo "✅ Pull request created for branch: $BRANCH"
+            else
+              echo "PR already exists: #$EXISTING_PR"
+            fi
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  claude-reviewer:
+    runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'pull_request' &&
+       github.event.action == 'opened' &&
+       contains(github.event.pull_request.head.ref, 'claude/'))
+
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Add Review Comment
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} --body "@claude Please review this PR for code quality, security, and best practices. If everything looks good, sign off with LGTM."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
