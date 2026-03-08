@@ -34,22 +34,8 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           use_bedrock: true
+          track_progress: true
           additional_permissions: "Bash(gh:*)"
-          prompt: |
-            You have been triggered by an issue. Analyze the issue and:
-
-            1. Determine if you can implement the requested changes
-            2. If YES:
-               - Implement the changes
-               - Push to a new branch
-               - Check if a PR exists: gh pr list --head <branch-name>
-               - If no PR, create one: gh pr create --base main --head <branch-name> --title "<title>" --body "Closes #<issue-number>"
-               - Add a comment "@claude review" to the PR to trigger review
-               - Comment on the issue: "✅ Changes implemented and PR created: <pr-url>"
-
-            3. If NO (cannot implement):
-               - Comment on the issue explaining why you cannot implement it
-               - Be specific: missing context, unclear requirements, requires human decision, etc.
         env:
           AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
