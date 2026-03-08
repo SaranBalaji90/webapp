@@ -30,16 +30,65 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Claude Code Action
+        id: claude
         uses: anthropics/claude-code-action@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           use_bedrock: true
           track_progress: true
           label_trigger: "claude"
-          additional_permissions: "Bash(gh:*)"
         env:
           AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
+
+      - name: Auto-create PR from Claude branch
+        if: github.event_name == 'issue_comment'
+        run: |
+          sleep 5  # Give Claude time to push
+
+          # Find the most recent Claude branch
+          ISSUE_NUM="${{ github.event.issue.number }}"
+          BRANCH=$(git ls-remote --heads origin "refs/heads/claude/issue-${ISSUE_NUM}-*" | sort -r | head -1 | sed 's|.*/||')
+
+          if [ -z "$BRANCH" ]; then
+            echo "No Claude branch found for issue #${ISSUE_NUM}"
+            exit 0
+          fi
+
+          echo "Found branch: $BRANCH"
+
+          # Check if PR already exists
+          EXISTING_PR=$(gh pr list --head $BRANCH --json number --jq '.[0].number' || echo "")
+
+          if [ -n "$EXISTING_PR" ]; then
+            echo "PR already exists: #$EXISTING_PR"
+          else
+            # Get commit message for PR title
+            git fetch origin $BRANCH
+            TITLE=$(git log origin/$BRANCH -1 --pretty=%s)
+
+            # Create PR
+            PR_URL=$(gh pr create \
+              --base main \
+              --head $BRANCH \
+              --title "$TITLE" \
+              --body "Automated changes by Claude Code in response to issue #${ISSUE_NUM}
+
+Closes #${ISSUE_NUM}" || echo "")
+
+            if [ -n "$PR_URL" ]; then
+              echo "✅ PR created: $PR_URL"
+
+              # Trigger review
+              PR_NUM=$(echo $PR_URL | grep -oP '\d+$')
+              gh pr comment $PR_NUM --body "@claude review" || true
+
+              # Update issue
+              gh issue comment $ISSUE_NUM --body "✅ Pull request created: $PR_URL - Review has been triggered automatically."
+            fi
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   claude-pr-update:
     runs-on: ubuntu-latest
