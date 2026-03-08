@@ -5,6 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Webapp Dashboard v3</title>
   <style>
+    :root {
+      /* Default theme colors (Night) */
+      --hero-gradient-1: #0f0c29;
+      --hero-gradient-2: #302b63;
+      --hero-gradient-3: #24243e;
+      --features-gradient-1: #1a1a2e;
+      --features-gradient-2: #16213e;
+      --features-gradient-3: #0f3460;
+      --stats-gradient-1: #0f0c29;
+      --stats-gradient-2: #1b1b3a;
+      --stats-gradient-3: #24243e;
+      --cta-gradient-1: #16213e;
+      --cta-gradient-2: #1a1a2e;
+      --cta-gradient-3: #0f0c29;
+      --orb1-color: #f093fb;
+      --orb2-color: #4facfe;
+      --particle-opacity: 0.5;
+    }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html { scroll-behavior: smooth; }
     body {
@@ -23,11 +41,12 @@
     section {
       min-height: 100vh; display: flex; align-items: center; justify-content: center;
       position: relative; overflow: hidden;
+      transition: background 8s ease-in-out;
     }
-    .hero { background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); }
-    .features { background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460); }
-    .stats { background: linear-gradient(135deg, #0f0c29, #1b1b3a, #24243e); }
-    .cta { background: linear-gradient(135deg, #16213e, #1a1a2e, #0f0c29); }
+    .hero { background: linear-gradient(135deg, var(--hero-gradient-1), var(--hero-gradient-2), var(--hero-gradient-3)); }
+    .features { background: linear-gradient(135deg, var(--features-gradient-1), var(--features-gradient-2), var(--features-gradient-3)); }
+    .stats { background: linear-gradient(135deg, var(--stats-gradient-1), var(--stats-gradient-2), var(--stats-gradient-3)); }
+    .cta { background: linear-gradient(135deg, var(--cta-gradient-1), var(--cta-gradient-2), var(--cta-gradient-3)); }
     /* Glassmorphism card */
     .card {
       background: rgba(255,255,255,0.05); backdrop-filter: blur(20px);
@@ -88,9 +107,12 @@
       border-radius: 12px; padding: 0.6rem 1.2rem; font-size: 0.85rem; color: rgba(255,255,255,0.7);
     }
     /* Orbs */
-    .orb { position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.4; }
-    .orb1 { width: 400px; height: 400px; background: #f093fb; top: -10%; left: -5%; }
-    .orb2 { width: 300px; height: 300px; background: #4facfe; bottom: -10%; right: -5%; }
+    .orb {
+      position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.4;
+      transition: background 8s ease-in-out;
+    }
+    .orb1 { width: 400px; height: 400px; background: var(--orb1-color); top: -10%; left: -5%; }
+    .orb2 { width: 300px; height: 300px; background: var(--orb2-color); bottom: -10%; right: -5%; }
     /* Scroll-reveal elements */
     .reveal {
       opacity: 0; transform: translateY(60px);
@@ -211,6 +233,105 @@
   </section>
 
   <script>
+    // Dynamic Time-of-Day Theme System
+    const themes = {
+      dawn: {
+        name: 'Dawn',
+        hours: [5, 6],
+        hero: ['#ff6b9d', '#ffa07a', '#ffd89b'],
+        features: ['#ffa07a', '#ffd89b', '#ffb199'],
+        stats: ['#ff6b9d', '#ffa894', '#ffd89b'],
+        cta: ['#ffd89b', '#ffa07a', '#ff6b9d'],
+        orb1: '#ff6b9d',
+        orb2: '#ffa07a',
+        particleOpacity: 0.3
+      },
+      morning: {
+        name: 'Morning',
+        hours: [7, 8, 9, 10],
+        hero: ['#89f7fe', '#66a6ff', '#84fab0'],
+        features: ['#66a6ff', '#84fab0', '#89f7fe'],
+        stats: ['#89f7fe', '#75d1f7', '#84fab0'],
+        cta: ['#84fab0', '#66a6ff', '#89f7fe'],
+        orb1: '#89f7fe',
+        orb2: '#66a6ff',
+        particleOpacity: 0.35
+      },
+      midday: {
+        name: 'Midday',
+        hours: [11, 12, 13, 14],
+        hero: ['#4facfe', '#00f2fe', '#43e97b'],
+        features: ['#00f2fe', '#43e97b', '#4facfe'],
+        stats: ['#4facfe', '#2acff0', '#43e97b'],
+        cta: ['#43e97b', '#00f2fe', '#4facfe'],
+        orb1: '#4facfe',
+        orb2: '#00f2fe',
+        particleOpacity: 0.25
+      },
+      afternoon: {
+        name: 'Afternoon',
+        hours: [15, 16, 17],
+        hero: ['#f5af19', '#f12711', '#fa709a'],
+        features: ['#f12711', '#fa709a', '#f5af19'],
+        stats: ['#f5af19', '#f36c15', '#fa709a'],
+        cta: ['#fa709a', '#f12711', '#f5af19'],
+        orb1: '#f5af19',
+        orb2: '#f12711',
+        particleOpacity: 0.35
+      },
+      dusk: {
+        name: 'Dusk',
+        hours: [18, 19],
+        hero: ['#ff0844', '#ffb199', '#7367f0'],
+        features: ['#ffb199', '#7367f0', '#ff0844'],
+        stats: ['#ff0844', '#bb5c9e', '#7367f0'],
+        cta: ['#7367f0', '#ffb199', '#ff0844'],
+        orb1: '#ff0844',
+        orb2: '#7367f0',
+        particleOpacity: 0.4
+      },
+      night: {
+        name: 'Night',
+        hours: [20, 21, 22, 23, 0, 1, 2, 3, 4],
+        hero: ['#0f0c29', '#302b63', '#24243e'],
+        features: ['#1a1a2e', '#16213e', '#0f3460'],
+        stats: ['#0f0c29', '#1b1b3a', '#24243e'],
+        cta: ['#16213e', '#1a1a2e', '#0f0c29'],
+        orb1: '#f093fb',
+        orb2: '#4facfe',
+        particleOpacity: 0.5
+      }
+    };
+
+    function applyTheme(theme) {
+      const root = document.documentElement;
+      root.style.setProperty('--hero-gradient-1', theme.hero[0]);
+      root.style.setProperty('--hero-gradient-2', theme.hero[1]);
+      root.style.setProperty('--hero-gradient-3', theme.hero[2]);
+      root.style.setProperty('--features-gradient-1', theme.features[0]);
+      root.style.setProperty('--features-gradient-2', theme.features[1]);
+      root.style.setProperty('--features-gradient-3', theme.features[2]);
+      root.style.setProperty('--stats-gradient-1', theme.stats[0]);
+      root.style.setProperty('--stats-gradient-2', theme.stats[1]);
+      root.style.setProperty('--stats-gradient-3', theme.stats[2]);
+      root.style.setProperty('--cta-gradient-1', theme.cta[0]);
+      root.style.setProperty('--cta-gradient-2', theme.cta[1]);
+      root.style.setProperty('--cta-gradient-3', theme.cta[2]);
+      root.style.setProperty('--orb1-color', theme.orb1);
+      root.style.setProperty('--orb2-color', theme.orb2);
+      root.style.setProperty('--particle-opacity', theme.particleOpacity);
+    }
+
+    function updateTheme() {
+      const hour = new Date().getHours();
+      for (const key in themes) {
+        if (themes[key].hours.includes(hour)) {
+          applyTheme(themes[key]);
+          break;
+        }
+      }
+    }
+
     // Clock
     const start = Date.now();
     function updateClock() {
@@ -221,7 +342,13 @@
       const s = Math.floor((Date.now() - start) / 1000), m = Math.floor(s / 60), h = Math.floor(m / 60);
       document.getElementById('uptime').textContent = '⏱ ' + (h ? h + 'h ' : '') + (m % 60) + 'm ' + (s % 60) + 's';
     }
-    updateClock(); setInterval(updateClock, 1000);
+
+    // Initialize theme on load
+    updateTheme();
+    updateClock();
+    setInterval(updateClock, 1000);
+    // Update theme every minute to catch hour changes
+    setInterval(updateTheme, 60000);
 
     // Scroll progress bar + reveal
     function onScroll() {
@@ -248,24 +375,25 @@
     let particles = [];
     function resizeCanvas() { canvas.width = innerWidth; canvas.height = innerHeight; }
     resizeCanvas(); addEventListener('resize', resizeCanvas);
-    for (let i = 0; i < 60; i++) particles.push({ x: Math.random() * innerWidth, y: Math.random() * innerHeight, r: Math.random() * 2 + 0.5, dx: (Math.random() - 0.5) * 0.4, dy: (Math.random() - 0.5) * 0.4, o: Math.random() * 0.5 + 0.2 });
+    for (let i = 0; i < 60; i++) particles.push({ x: Math.random() * innerWidth, y: Math.random() * innerHeight, r: Math.random() * 2 + 0.5, dx: (Math.random() - 0.5) * 0.4, dy: (Math.random() - 0.5) * 0.4, baseO: Math.random() * 0.5 + 0.2 });
     let lastTime = performance.now(), frames = 0, fps = 0;
     function drawParticles(now) {
       frames++;
       if (now - lastTime >= 1000) { fps = frames; frames = 0; lastTime = now; document.getElementById('statFps').textContent = fps; }
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const themeOpacity = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--particle-opacity')) || 0.5;
       particles.forEach(p => {
         p.x += p.dx; p.y += p.dy;
         if (p.x < 0) p.x = canvas.width; if (p.x > canvas.width) p.x = 0;
         if (p.y < 0) p.y = canvas.height; if (p.y > canvas.height) p.y = 0;
         ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255,255,255,${p.o})`; ctx.fill();
+        ctx.fillStyle = `rgba(255,255,255,${p.baseO * themeOpacity})`; ctx.fill();
       });
       // Draw lines between nearby particles
       for (let i = 0; i < particles.length; i++)
         for (let j = i + 1; j < particles.length; j++) {
           const d = Math.hypot(particles[i].x - particles[j].x, particles[i].y - particles[j].y);
-          if (d < 120) { ctx.beginPath(); ctx.moveTo(particles[i].x, particles[i].y); ctx.lineTo(particles[j].x, particles[j].y); ctx.strokeStyle = `rgba(255,255,255,${0.15 * (1 - d / 120)})`; ctx.stroke(); }
+          if (d < 120) { ctx.beginPath(); ctx.moveTo(particles[i].x, particles[i].y); ctx.lineTo(particles[j].x, particles[j].y); ctx.strokeStyle = `rgba(255,255,255,${0.15 * (1 - d / 120) * themeOpacity})`; ctx.stroke(); }
         }
       document.getElementById('statParticles').textContent = particles.length;
       requestAnimationFrame(drawParticles);
