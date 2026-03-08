@@ -1,0 +1,180 @@
+name: Claude Code
+
+on:
+  issues:
+    types: [opened, labeled]
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+  issue_comment:
+    types: [created, edited]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  claude-implement:
+    runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'issues' && github.event.action == 'opened') ||
+      (github.event_name == 'issue_comment' &&
+       !github.event.issue.pull_request &&
+       startsWith(github.event.comment.body, '@claude'))
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Claude Code Action
+        id: claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          use_bedrock: true
+          track_progress: true
+          label_trigger: "claude"
+        env:
+          AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+
+      - name: Auto-create PR from Claude branch
+        if: github.event_name == 'issue_comment' || github.event_name == 'issues'
+        run: |
+          sleep 5  # Give Claude time to push
+
+          # Find the most recent Claude branch
+          ISSUE_NUM="${{ github.event.issue.number || github.event.number }}"
+          BRANCH=$(git ls-remote --heads origin "refs/heads/claude/issue-${ISSUE_NUM}-*" | sort -r | head -1 | awk '{print $2}' | sed 's|refs/heads/||')
+
+          if [ -z "$BRANCH" ]; then
+            echo "No Claude branch found for issue #${ISSUE_NUM}"
+            exit 0
+          fi
+
+          echo "Found branch: $BRANCH"
+
+          # Check if PR already exists
+          EXISTING_PR=$(gh pr list --head $BRANCH --json number --jq '.[0].number' || echo "")
+
+          if [ -n "$EXISTING_PR" ]; then
+            echo "PR already exists: #$EXISTING_PR"
+          else
+            # Get commit message for PR title
+            git fetch origin $BRANCH
+            TITLE=$(git log origin/$BRANCH -1 --pretty=%s)
+
+            # Create PR with simple body
+            PR_URL=$(gh pr create --base main --head $BRANCH --title "$TITLE" --body "Automated changes by Claude Code in response to issue #${ISSUE_NUM}. Closes #${ISSUE_NUM}" || echo "")
+
+            if [ -n "$PR_URL" ]; then
+              echo "✅ PR created: $PR_URL"
+
+              # Trigger review
+              PR_NUM=$(echo $PR_URL | grep -oP '\d+$')
+              gh pr comment $PR_NUM --body "@claude review" || true
+
+              # Update issue
+              gh issue comment $ISSUE_NUM --body "✅ Pull request created: $PR_URL - Review has been triggered automatically."
+            fi
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+
+  claude-pr-update:
+    runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request &&
+       startsWith(github.event.comment.body, '@claude') &&
+       !contains(github.event.comment.body, 'review'))
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Claude Update PR
+        uses: anthropics/claude-code-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          use_bedrock: true
+        env:
+          AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+
+  claude-review:
+    runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'pull_request' &&
+       (github.event.action == 'opened' || github.event.action == 'synchronize') &&
+       contains(github.event.pull_request.head.ref, 'claude/')) ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request &&
+       startsWith(github.event.comment.body, '@claude') &&
+       contains(github.event.comment.body, 'review'))
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Claude Code Review
+        uses: anthropics/claude-code-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          use_bedrock: true
+        env:
+          AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+
+  ui-improvement-agent:
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'pull_request' &&
+      github.event.action == 'closed' &&
+      github.event.pull_request.merged == true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Analyze and suggest UI improvement
+        uses: anthropics/claude-code-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          use_bedrock: true
+          direct_prompt: |
+            You are a creative UI/UX improvement agent. Analyze the current state of this web application's HTML, CSS, and any frontend code.
+
+            Think creatively about ONE specific, actionable improvement that would make the UI better. Consider things like:
+            - Visual design (colors, spacing, typography, animations)
+            - User experience (navigation, feedback, loading states)
+            - Accessibility (contrast, aria labels, keyboard navigation)
+            - Responsiveness (mobile layout, breakpoints)
+            - Micro-interactions (hover effects, transitions, scroll behavior)
+            - Content presentation (cards, grids, hero sections)
+
+            Pick something specific and interesting — not generic. Be creative but should be simple enough.
+
+            Then create a GitHub issue with:
+            - A clear, specific title describing the improvement
+            - A detailed description of what to change and why it improves the experience
+            - At the end of the issue body, add: "@claude raise PR for this"
+
+            Use the gh CLI to create the issue:
+            gh issue create --title "<your title>" --body "<your description>"
+        env:
+          AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
