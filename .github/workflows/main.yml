@@ -154,6 +154,7 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           use_bedrock: true
+          show_full_output: true
           additional_permissions: |
             Bash(gh:*)
             Bash(cat:*)
