@@ -12,11 +12,11 @@ permissions:
   issues: write
 
 jobs:
-  claude-code:
+  claude-implement:
     runs-on: ubuntu-latest
     if: |
-      (github.event_name == 'pull_request') ||
       (github.event_name == 'issue_comment' &&
+       !github.event.issue.pull_request &&
        startsWith(github.event.comment.body, '@claude'))
 
     steps:
@@ -28,7 +28,6 @@ jobs:
 
       - name: Claude Code Action
         uses: anthropics/claude-code-action@v1
-        id: claude
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           use_bedrock: true
@@ -37,7 +36,6 @@ jobs:
           AWS_REGION: ${{ secrets.AWS_REGION }}
 
       - name: Create Pull Request
-        if: github.event_name == 'issue_comment'
         run: |
           # Get the branch name that Claude created
           BRANCH=$(git branch -r | grep 'origin/claude/' | sort -r | head -1 | sed 's|origin/||' | tr -d ' ')
@@ -65,23 +63,35 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  claude-reviewer:
+  claude-review:
     runs-on: ubuntu-latest
     if: |
       (github.event_name == 'pull_request' &&
        github.event.action == 'opened' &&
-       contains(github.event.pull_request.head.ref, 'claude/'))
+       contains(github.event.pull_request.head.ref, 'claude/')) ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request &&
+       startsWith(github.event.comment.body, '@claude'))
 
     steps:
-      - name: Checkout PR
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Add Review Comment
-        run: |
-          gh pr comment ${{ github.event.pull_request.number }} --body "@claude Please review this PR for code quality, security, and best practices. If everything looks good, sign off with LGTM."
+      - name: Claude Code Review
+        uses: anthropics/claude-code-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          use_bedrock: true
+          prompt: |
+            You are reviewing a pull request. Please:
+            1. Review the code changes for quality, security, and best practices
+            2. Check for potential bugs or issues
+            3. Verify the changes match the requirements
+            4. If everything looks good, end your comment with "✅ LGTM - Ready to merge"
+            5. If there are issues, clearly explain what needs to be fixed
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
