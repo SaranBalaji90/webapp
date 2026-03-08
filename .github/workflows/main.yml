@@ -42,12 +42,12 @@ jobs:
           AWS_REGION: ${{ secrets.AWS_REGION }}
 
       - name: Auto-create PR from Claude branch
-        if: github.event_name == 'issue_comment'
+        if: github.event_name == 'issue_comment' || github.event_name == 'issues'
         run: |
           sleep 5  # Give Claude time to push
 
           # Find the most recent Claude branch
-          ISSUE_NUM="${{ github.event.issue.number }}"
+          ISSUE_NUM="${{ github.event.issue.number || github.event.number }}"
           BRANCH=$(git ls-remote --heads origin "refs/heads/claude/issue-${ISSUE_NUM}-*" | sort -r | head -1 | awk '{print $2}' | sed 's|refs/heads/||')
 
           if [ -z "$BRANCH" ]; then
