@@ -20,6 +20,12 @@ jobs:
        startsWith(github.event.comment.body, '@claude'))
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Claude Code Action
         uses: anthropics/claude-code-action@v1
         with:
