@@ -67,17 +67,8 @@ jobs:
             git fetch origin $BRANCH
             TITLE=$(git log origin/$BRANCH -1 --pretty=%s)
 
-            # Create PR
-            PR_URL=$(gh pr create \
-              --base main \
-              --head $BRANCH \
-              --title "$TITLE" \
-              --body "$(cat <<EOF
-Automated changes by Claude Code in response to issue #${ISSUE_NUM}
-
-Closes #${ISSUE_NUM}
-EOF
-)" || echo "")
+            # Create PR with simple body
+            PR_URL=$(gh pr create --base main --head $BRANCH --title "$TITLE" --body "Automated changes by Claude Code in response to issue #${ISSUE_NUM}. Closes #${ISSUE_NUM}" || echo "")
 
             if [ -n "$PR_URL" ]; then
               echo "✅ PR created: $PR_URL"
