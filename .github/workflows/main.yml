@@ -68,13 +68,15 @@ jobs:
             TITLE=$(git log origin/$BRANCH -1 --pretty=%s)
 
             # Create PR
+            PR_BODY="Automated changes by Claude Code in response to issue #${ISSUE_NUM}
+
+Closes #${ISSUE_NUM}"
+
             PR_URL=$(gh pr create \
               --base main \
               --head $BRANCH \
               --title "$TITLE" \
-              --body "Automated changes by Claude Code in response to issue #${ISSUE_NUM}
-
-Closes #${ISSUE_NUM}" || echo "")
+              --body "$PR_BODY" || echo "")
 
             if [ -n "$PR_URL" ]; then
               echo "✅ PR created: $PR_URL"
