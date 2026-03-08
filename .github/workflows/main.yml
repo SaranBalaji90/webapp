@@ -63,15 +63,40 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  claude-pr-update:
+    runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request &&
+       startsWith(github.event.comment.body, '@claude') &&
+       !contains(github.event.comment.body, 'review'))
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Claude Update PR
+        uses: anthropics/claude-code-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          use_bedrock: true
+        env:
+          AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+
   claude-review:
     runs-on: ubuntu-latest
     if: |
       (github.event_name == 'pull_request' &&
-       github.event.action == 'opened' &&
+       (github.event.action == 'opened' || github.event.action == 'synchronize') &&
        contains(github.event.pull_request.head.ref, 'claude/')) ||
       (github.event_name == 'issue_comment' &&
        github.event.issue.pull_request &&
-       startsWith(github.event.comment.body, '@claude'))
+       startsWith(github.event.comment.body, '@claude') &&
+       contains(github.event.comment.body, 'review'))
 
     steps:
       - name: Checkout repository
@@ -91,7 +116,7 @@ jobs:
             2. Check for potential bugs or issues
             3. Verify the changes match the requirements
             4. If everything looks good, end your comment with "✅ LGTM - Ready to merge"
-            5. If there are issues, clearly explain what needs to be fixed
+            5. If there are issues, comment with "@claude <description of what needs to be fixed>"
         env:
           AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
