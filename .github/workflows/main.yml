@@ -174,9 +174,10 @@ jobs:
             - A detailed description of what to change and why it improves the experience
             - At the end of the issue body, add: "@claude raise PR for this"
 
-            Use the gh CLI to create the issue:
-            gh issue create --title "<your title>" --body "<your description>"
+            Use the gh CLI to create the issue. First run: export GH_TOKEN=$PAT_TOKEN
+            Then: gh issue create --title "<your title>" --body "<your description>"
         env:
           AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
           GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
