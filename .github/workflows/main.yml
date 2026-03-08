@@ -31,37 +31,15 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           use_bedrock: true
+          additional_permissions: "Bash(gh:*)"
+          prompt: |
+            After you complete the changes and push to the branch:
+            1. Check if a PR already exists for your branch using: gh pr list --head <branch-name>
+            2. If no PR exists, create one using: gh pr create --base main --head <branch-name> --title "<title>" --body "<description>"
+            3. Confirm the PR was created successfully
         env:
           AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
-
-      - name: Create Pull Request
-        run: |
-          # Get the branch name that Claude created
-          BRANCH=$(git branch -r | grep 'origin/claude/' | sort -r | head -1 | sed 's|origin/||' | tr -d ' ')
-
-          if [ -n "$BRANCH" ]; then
-            git fetch origin
-            git checkout $BRANCH
-
-            # Check if PR already exists
-            EXISTING_PR=$(gh pr list --head $BRANCH --json number --jq '.[0].number')
-
-            if [ -z "$EXISTING_PR" ]; then
-              # Create PR
-              gh pr create \
-                --base main \
-                --head $BRANCH \
-                --title "$(git log -1 --pretty=%s)" \
-                --body "Automated changes by Claude Code in response to issue #${{ github.event.issue.number }}"
-
-              echo "✅ Pull request created for branch: $BRANCH"
-            else
-              echo "PR already exists: #$EXISTING_PR"
-            fi
-          fi
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   claude-pr-update:
     runs-on: ubuntu-latest
