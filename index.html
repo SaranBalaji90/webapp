@@ -35,6 +35,33 @@
       padding: 3rem 4rem; text-align: center;
       box-shadow: 0 25px 50px rgba(0,0,0,0.3);
       position: relative; z-index: 1;
+      transform-style: preserve-3d;
+      transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1),
+                  box-shadow 0.5s cubic-bezier(0.23, 1, 0.32, 1),
+                  backdrop-filter 0.3s ease;
+    }
+    @media (hover: hover) and (pointer: fine) {
+      .card:hover {
+        backdrop-filter: blur(24px);
+      }
+    }
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      border-radius: 24px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.15), rgba(255,255,255,0));
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+    @media (hover: hover) and (pointer: fine) {
+      .card:hover::before {
+        opacity: 1;
+      }
     }
     h1 {
       font-size: 3rem;
@@ -75,9 +102,35 @@
     .feature-card {
       background: rgba(255,255,255,0.05); backdrop-filter: blur(10px);
       border: 1px solid rgba(255,255,255,0.08); border-radius: 16px;
-      padding: 2rem; text-align: center; transition: transform 0.3s, box-shadow 0.3s;
+      padding: 2rem; text-align: center;
+      transform-style: preserve-3d;
+      transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1),
+                  box-shadow 0.5s cubic-bezier(0.23, 1, 0.32, 1),
+                  backdrop-filter 0.3s ease;
     }
-    .feature-card:hover { transform: translateY(-8px) scale(1.02); box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+    @media (hover: hover) and (pointer: fine) {
+      .feature-card:hover {
+        backdrop-filter: blur(14px);
+      }
+    }
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0));
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+    @media (hover: hover) and (pointer: fine) {
+      .feature-card:hover::before {
+        opacity: 1;
+      }
+    }
     .feature-icon { font-size: 2.5rem; margin-bottom: 0.8rem; }
     .feature-card h3 { font-size: 1.1rem; margin-bottom: 0.5rem; }
     .feature-card p { font-size: 0.9rem; margin-top: 0; }
@@ -218,6 +271,69 @@
       requestAnimationFrame(drawParticles);
     }
     requestAnimationFrame(drawParticles);
+
+    // 3D Tilt Effect for Cards (Progressive Enhancement)
+    if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+      const tiltElements = document.querySelectorAll('.card, .feature-card');
+
+      tiltElements.forEach(el => {
+        let isHovering = false;
+
+        el.addEventListener('mouseenter', () => {
+          isHovering = true;
+        });
+
+        el.addEventListener('mousemove', (e) => {
+          if (!isHovering) return;
+
+          const rect = el.getBoundingClientRect();
+          const centerX = rect.left + rect.width / 2;
+          const centerY = rect.top + rect.height / 2;
+
+          // Calculate mouse position relative to card center (-1 to 1)
+          const percentX = (e.clientX - centerX) / (rect.width / 2);
+          const percentY = (e.clientY - centerY) / (rect.height / 2);
+
+          // Calculate tilt angles (max 15 degrees)
+          const maxTilt = 15;
+          const tiltY = percentX * maxTilt; // Rotate around Y axis (left-right tilt)
+          const tiltX = -percentY * maxTilt; // Rotate around X axis (up-down tilt)
+
+          // Scale slightly on hover
+          const scale = 1.02;
+
+          // Calculate shadow offset (opposite to tilt direction for depth)
+          const shadowX = -percentX * 25;
+          const shadowY = -percentY * 25;
+          const shadowBlur = 50 + Math.abs(percentX * 10) + Math.abs(percentY * 10);
+
+          // Apply transforms
+          if (el.classList.contains('feature-card')) {
+            // Feature cards also get a slight translateY
+            el.style.transform = `perspective(1000px) rotateX(${tiltX}deg) rotateY(${tiltY}deg) scale(${scale}) translateY(-8px)`;
+          } else {
+            // Regular cards
+            el.style.transform = `perspective(1000px) rotateX(${tiltX}deg) rotateY(${tiltY}deg) scale(${scale})`;
+          }
+
+          // Update shadow dynamically
+          el.style.boxShadow = `${shadowX}px ${shadowY}px ${shadowBlur}px rgba(0,0,0,0.4)`;
+
+          // Update shine gradient direction (move opposite to tilt)
+          if (el.querySelector('::before')) {
+            const angle = 135 + percentX * 30 - percentY * 30;
+            el.style.setProperty('--shine-angle', `${angle}deg`);
+          }
+        });
+
+        el.addEventListener('mouseleave', () => {
+          isHovering = false;
+          // Reset to neutral with spring animation
+          el.style.transform = '';
+          el.style.boxShadow = '';
+        });
+      });
+    }
   </script>
 </body>
 </html>
