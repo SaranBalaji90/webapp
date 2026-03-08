@@ -169,15 +169,25 @@ jobs:
 
             Pick something specific and interesting — not generic. Be creative but should be simple enough.
 
-            Then create a GitHub issue with:
-            - A clear, specific title describing the improvement
-            - A detailed description of what to change and why it improves the experience
-            - At the end of the issue body, add: "@claude raise PR for this"
+            Write your suggestion to two files in the repo root:
+            1. /tmp/issue-title.txt — containing ONLY the issue title (one line, no quotes)
+            2. /tmp/issue-body.md — containing the full issue body in markdown, ending with a line that says: @claude raise PR for this
 
-            Use the gh CLI to create the issue. First run: export GH_TOKEN=$PAT_TOKEN
-            Then: gh issue create --title "<your title>" --body "<your description>"
+            Do NOT try to create the issue yourself. Just write those two files.
         env:
           AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
+
+      - name: Create GitHub issue from Claude output
+        run: |
+          if [ -f /tmp/issue-title.txt ] && [ -f /tmp/issue-body.md ]; then
+            TITLE=$(cat /tmp/issue-title.txt)
+            echo "Creating issue: $TITLE"
+            gh issue create --title "$TITLE" --body-file /tmp/issue-body.md
+          else
+            echo "Claude did not produce issue files, skipping"
+            echo "Checking /tmp for any output:"
+            ls -la /tmp/issue-* 2>/dev/null || echo "No issue files found"
+          fi
+        env:
           GH_TOKEN: ${{ secrets.PAT_TOKEN }}
-          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
