@@ -48,7 +48,7 @@ jobs:
 
           # Find the most recent Claude branch
           ISSUE_NUM="${{ github.event.issue.number }}"
-          BRANCH=$(git ls-remote --heads origin "refs/heads/claude/issue-${ISSUE_NUM}-*" | sort -r | head -1 | sed 's|refs/heads/||')
+          BRANCH=$(git ls-remote --heads origin "refs/heads/claude/issue-${ISSUE_NUM}-*" | sort -r | head -1 | awk '{print $2}' | sed 's|refs/heads/||')
 
           if [ -z "$BRANCH" ]; then
             echo "No Claude branch found for issue #${ISSUE_NUM}"
