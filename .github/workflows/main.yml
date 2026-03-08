@@ -155,9 +155,9 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           use_bedrock: true
           additional_permissions: |
-            Bash(gh *)
-            Bash(cat *)
-            Bash(ls *)
+            Bash(gh:*)
+            Bash(cat:*)
+            Bash(ls:*)
           prompt: |
             You are a creative UI/UX improvement agent. Analyze the current state of this web application's HTML, CSS, and any frontend code.
 
