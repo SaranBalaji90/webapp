@@ -1,0 +1,39 @@
+version: 0.2
+
+phases:
+  install:
+    commands:
+      - echo Installing kubectl...
+      - curl -LO "https://dl.k8s.io/release/$(curl -Ls https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+      - chmod +x kubectl
+      - mv kubectl /usr/local/bin/
+      - kubectl version --client
+
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR_REPO_URI
+      - IMAGE_TAG="$(date +%Y%m%d-%H%M%S)-$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | head -c 7)"
+      - IMAGE_URI="${ECR_REPO_URI}:${IMAGE_TAG}"
+      - echo "Image URI = $IMAGE_URI"
+
+  build:
+    commands:
+      - echo Building Docker image...
+      - docker build -t $IMAGE_URI .
+      - docker tag $IMAGE_URI ${ECR_REPO_URI}:latest
+
+  post_build:
+    commands:
+      - echo Pushing image to ECR...
+      - docker push $IMAGE_URI
+      - docker push ${ECR_REPO_URI}:latest
+
+      - echo Updating kubeconfig for EKS...
+      - aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region $AWS_DEFAULT_REGION
+
+      - echo Deploying to EKS...
+      - kubectl set image deployment/$K8S_DEPLOYMENT $K8S_DEPLOYMENT=$IMAGE_URI -n $K8S_NAMESPACE
+      - kubectl rollout status deployment/$K8S_DEPLOYMENT -n $K8S_NAMESPACE --timeout=120s
+
+      - echo "Deployed $IMAGE_URI to $EKS_CLUSTER_NAME/$K8S_NAMESPACE"
