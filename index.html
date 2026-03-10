@@ -172,6 +172,8 @@
     }
     /* Particles canvas */
     #particles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+    /* Cursor trail canvas */
+    #cursorTrail { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; }
     /* Parallax mouse-tracking */
     .parallax-layer { transition: transform 0.15s ease-out; }
     @keyframes shimmer { 0% { background-position: 0%; } 100% { background-position: 200%; } }
@@ -261,6 +263,7 @@
 <body>
   <div class="progress-bar" id="progressBar"></div>
   <canvas id="particles"></canvas>
+  <canvas id="cursorTrail"></canvas>
 
   <section class="hero" id="hero">
     <div class="orb orb1 parallax-layer" data-speed="0.03"></div>
@@ -487,6 +490,131 @@
       requestAnimationFrame(drawParticles);
     }
     requestAnimationFrame(drawParticles);
+
+    // Cursor Trail with Gradient Particles
+    (function() {
+      // Check if device supports hover (disable on touch devices)
+      const isTouchDevice = !window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+      // Check if user prefers reduced motion
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      // Don't enable cursor trail on touch devices or if user prefers reduced motion
+      if (isTouchDevice || prefersReducedMotion) {
+        return;
+      }
+
+      const trailCanvas = document.getElementById('cursorTrail');
+      const trailCtx = trailCanvas.getContext('2d');
+      let cursorTrailParticles = [];
+
+      // Resize canvas to match window
+      function resizeTrailCanvas() {
+        trailCanvas.width = innerWidth;
+        trailCanvas.height = innerHeight;
+      }
+      resizeTrailCanvas();
+      addEventListener('resize', resizeTrailCanvas);
+
+      // Get theme colors from CSS variables
+      function getThemeColors() {
+        const root = getComputedStyle(document.documentElement);
+        const orb1 = root.getPropertyValue('--orb1-color').trim();
+        const orb2 = root.getPropertyValue('--orb2-color').trim();
+        return { orb1, orb2 };
+      }
+
+      // Convert hex color to RGB components
+      function hexToRgb(hex) {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+          r: parseInt(result[1], 16),
+          g: parseInt(result[2], 16),
+          b: parseInt(result[3], 16)
+        } : { r: 255, g: 255, b: 255 };
+      }
+
+      // Throttle mouse movement (spawn particles every 30-50ms)
+      let lastSpawnTime = 0;
+      const spawnInterval = 40; // ~40ms = 25 particles per second
+
+      addEventListener('mousemove', (e) => {
+        const now = performance.now();
+        if (now - lastSpawnTime < spawnInterval) return;
+        lastSpawnTime = now;
+
+        // Get theme colors
+        const colors = getThemeColors();
+        const useOrb1 = Math.random() > 0.5;
+        const color = useOrb1 ? colors.orb1 : colors.orb2;
+        const rgb = hexToRgb(color);
+
+        // Spawn particle at cursor position
+        cursorTrailParticles.push({
+          x: e.clientX,
+          y: e.clientY,
+          size: Math.random() * 7 + 5, // 5-12px
+          baseSize: Math.random() * 7 + 5,
+          color: rgb,
+          opacity: 1,
+          lifetime: 0,
+          maxLifetime: 800, // 800ms fade duration
+          vx: (Math.random() - 0.5) * 0.3, // Slight random drift
+          vy: (Math.random() - 0.5) * 0.3,
+          blur: Math.random() * 2 + 2 // 2-4px blur
+        });
+      });
+
+      // Animate cursor trail particles
+      let lastTrailTime = performance.now();
+      function animateTrail(now) {
+        const deltaTime = now - lastTrailTime;
+        lastTrailTime = now;
+
+        // Clear canvas
+        trailCtx.clearRect(0, 0, trailCanvas.width, trailCanvas.height);
+
+        // Update and draw particles
+        for (let i = cursorTrailParticles.length - 1; i >= 0; i--) {
+          const p = cursorTrailParticles[i];
+
+          // Update lifetime
+          p.lifetime += deltaTime;
+
+          // Remove expired particles
+          if (p.lifetime >= p.maxLifetime) {
+            cursorTrailParticles.splice(i, 1);
+            continue;
+          }
+
+          // Calculate progress (0 to 1)
+          const progress = p.lifetime / p.maxLifetime;
+
+          // Update position with drift
+          p.x += p.vx;
+          p.y += p.vy;
+
+          // Calculate current opacity (fade from 1 to 0)
+          p.opacity = 1 - progress;
+
+          // Calculate current size (scale from 100% to 0%)
+          p.size = p.baseSize * (1 - progress);
+
+          // Draw particle with blur
+          trailCtx.save();
+          trailCtx.filter = `blur(${p.blur}px)`;
+          trailCtx.beginPath();
+          trailCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          trailCtx.fillStyle = `rgba(${p.color.r}, ${p.color.g}, ${p.color.b}, ${p.opacity})`;
+          trailCtx.fill();
+          trailCtx.restore();
+        }
+
+        requestAnimationFrame(animateTrail);
+      }
+
+      requestAnimationFrame(animateTrail);
+    })();
 
     // 3D Tilt Effect for Cards (Progressive Enhancement)
     if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
