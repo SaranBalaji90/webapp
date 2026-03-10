@@ -174,6 +174,8 @@
     #particles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
     /* Cursor trail canvas */
     #cursorTrail { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; }
+    /* Meteor canvas */
+    #meteors { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; }
     /* Parallax mouse-tracking */
     .parallax-layer { transition: transform 0.15s ease-out; }
     @keyframes shimmer { 0% { background-position: 0%; } 100% { background-position: 200%; } }
@@ -263,6 +265,7 @@
 <body>
   <div class="progress-bar" id="progressBar"></div>
   <canvas id="particles"></canvas>
+  <canvas id="meteors"></canvas>
   <canvas id="cursorTrail"></canvas>
 
   <section class="hero" id="hero">
@@ -614,6 +617,188 @@
       }
 
       requestAnimationFrame(animateTrail);
+    })();
+
+    // Shooting Star Meteor Effects
+    (function() {
+      // Check if device supports hover (disable on touch devices)
+      const isTouchDevice = !window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+      // Check if user prefers reduced motion
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      // Don't enable meteors on touch devices or if user prefers reduced motion
+      if (isTouchDevice || prefersReducedMotion) {
+        return;
+      }
+
+      const meteorCanvas = document.getElementById('meteors');
+      const meteorCtx = meteorCanvas.getContext('2d');
+      let meteors = [];
+      const MAX_METEORS = 3; // Limit simultaneous meteors
+
+      // Resize canvas to match window
+      function resizeMeteorCanvas() {
+        meteorCanvas.width = innerWidth;
+        meteorCanvas.height = innerHeight;
+      }
+      resizeMeteorCanvas();
+      addEventListener('resize', resizeMeteorCanvas);
+
+      // Get theme colors from CSS variables
+      function getThemeColors() {
+        const root = getComputedStyle(document.documentElement);
+        const orb1 = root.getPropertyValue('--orb1-color').trim();
+        const orb2 = root.getPropertyValue('--orb2-color').trim();
+        return { orb1, orb2 };
+      }
+
+      // Convert hex color to RGB components
+      function hexToRgb(hex) {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+          r: parseInt(result[1], 16),
+          g: parseInt(result[2], 16),
+          b: parseInt(result[3], 16)
+        } : { r: 255, g: 255, b: 255 };
+      }
+
+      // Create a new meteor
+      function createMeteor() {
+        // Don't create if at max capacity
+        if (meteors.length >= MAX_METEORS) return;
+
+        const colors = getThemeColors();
+        const useOrb1 = Math.random() > 0.5;
+        const color = useOrb1 ? colors.orb1 : colors.orb2;
+        const rgb = hexToRgb(color);
+
+        // Random edge position (top or right edge)
+        const spawnFromTop = Math.random() > 0.5;
+        let x, y, vx, vy;
+
+        if (spawnFromTop) {
+          // Spawn from top edge, moving diagonally down-left or down-right
+          x = Math.random() * meteorCanvas.width;
+          y = -10;
+          const moveRight = Math.random() > 0.5;
+          vx = (moveRight ? 1 : -1) * (Math.random() * 3 + 2); // 2-5px horizontal
+          vy = Math.random() * 3 + 2; // 2-5px vertical (always down)
+        } else {
+          // Spawn from right edge, moving diagonally down-left
+          x = meteorCanvas.width + 10;
+          y = Math.random() * meteorCanvas.height * 0.5; // Upper half
+          vx = -(Math.random() * 3 + 2); // 2-5px (always left)
+          vy = Math.random() * 3 + 2; // 2-5px (always down)
+        }
+
+        meteors.push({
+          x,
+          y,
+          vx,
+          vy,
+          size: Math.random() * 2 + 1, // 1-3px core
+          color: rgb,
+          trailLength: Math.random() * 70 + 80, // 80-150px trail
+          opacity: 1,
+          lifetime: 0,
+          fadeStart: 1500, // Start fading after 1.5s
+          maxLifetime: 2500 // Complete journey in ~2.5s max
+        });
+      }
+
+      // Schedule meteor spawns
+      function scheduleMeteor() {
+        const delay = Math.random() * 4000 + 3000; // 3-7 seconds
+        setTimeout(() => {
+          createMeteor();
+          scheduleMeteor(); // Schedule next meteor
+        }, delay);
+      }
+
+      // Start spawning meteors
+      scheduleMeteor();
+
+      // Animate meteors
+      let lastMeteorTime = performance.now();
+      function animateMeteors(now) {
+        const deltaTime = now - lastMeteorTime;
+        lastMeteorTime = now;
+
+        // Clear canvas
+        meteorCtx.clearRect(0, 0, meteorCanvas.width, meteorCanvas.height);
+
+        // Update and draw meteors
+        for (let i = meteors.length - 1; i >= 0; i--) {
+          const m = meteors[i];
+
+          // Update lifetime
+          m.lifetime += deltaTime;
+
+          // Calculate fade (starts fading after fadeStart time)
+          if (m.lifetime > m.fadeStart) {
+            const fadeProgress = (m.lifetime - m.fadeStart) / (m.maxLifetime - m.fadeStart);
+            m.opacity = Math.max(0, 1 - fadeProgress);
+          }
+
+          // Remove if expired or off-screen
+          if (m.lifetime >= m.maxLifetime ||
+              m.x < -100 || m.x > meteorCanvas.width + 100 ||
+              m.y < -100 || m.y > meteorCanvas.height + 100) {
+            meteors.splice(i, 1);
+            continue;
+          }
+
+          // Update position
+          m.x += m.vx;
+          m.y += m.vy;
+
+          // Draw meteor trail (gradient from current position backwards)
+          const trailSteps = 20;
+          for (let j = 0; j < trailSteps; j++) {
+            const progress = j / trailSteps;
+            const trailX = m.x - m.vx * progress * (m.trailLength / 5);
+            const trailY = m.y - m.vy * progress * (m.trailLength / 5);
+            const trailSize = m.size * (1 - progress * 0.8); // Taper to 20% of core
+            const trailOpacity = m.opacity * (1 - progress) * 0.6;
+
+            meteorCtx.beginPath();
+            meteorCtx.arc(trailX, trailY, trailSize, 0, Math.PI * 2);
+
+            // Create gradient glow
+            const gradient = meteorCtx.createRadialGradient(
+              trailX, trailY, 0,
+              trailX, trailY, trailSize * 3
+            );
+            gradient.addColorStop(0, `rgba(${m.color.r}, ${m.color.g}, ${m.color.b}, ${trailOpacity})`);
+            gradient.addColorStop(0.5, `rgba(${m.color.r}, ${m.color.g}, ${m.color.b}, ${trailOpacity * 0.5})`);
+            gradient.addColorStop(1, `rgba(${m.color.r}, ${m.color.g}, ${m.color.b}, 0)`);
+
+            meteorCtx.fillStyle = gradient;
+            meteorCtx.fill();
+          }
+
+          // Draw bright core
+          meteorCtx.beginPath();
+          meteorCtx.arc(m.x, m.y, m.size * 1.5, 0, Math.PI * 2);
+
+          // Core gradient
+          const coreGradient = meteorCtx.createRadialGradient(
+            m.x, m.y, 0,
+            m.x, m.y, m.size * 4
+          );
+          coreGradient.addColorStop(0, `rgba(255, 255, 255, ${m.opacity})`);
+          coreGradient.addColorStop(0.3, `rgba(${m.color.r}, ${m.color.g}, ${m.color.b}, ${m.opacity * 0.9})`);
+          coreGradient.addColorStop(1, `rgba(${m.color.r}, ${m.color.g}, ${m.color.b}, 0)`);
+
+          meteorCtx.fillStyle = coreGradient;
+          meteorCtx.fill();
+        }
+
+        requestAnimationFrame(animateMeteors);
+      }
+
+      requestAnimationFrame(animateMeteors);
     })();
 
     // 3D Tilt Effect for Cards (Progressive Enhancement)
