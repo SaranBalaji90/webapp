@@ -22,6 +22,7 @@
       --orb1-color: #f093fb;
       --orb2-color: #4facfe;
       --particle-opacity: 0.5;
+      --grain-opacity: 0.05;
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html { scroll-behavior: smooth; }
@@ -236,6 +237,8 @@
     }
     /* Particles canvas */
     #particles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+    /* Film grain canvas */
+    #filmGrain { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; }
     /* Meteor canvas */
     #meteors { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; }
     /* Ripple canvas */
@@ -331,6 +334,7 @@
 <body>
   <div class="progress-bar" id="progressBar"></div>
   <canvas id="particles"></canvas>
+  <canvas id="filmGrain"></canvas>
   <canvas id="meteors"></canvas>
   <canvas id="rippleCanvas"></canvas>
   <canvas id="cursorTrail"></canvas>
@@ -405,7 +409,8 @@
         cta: ['#ffd89b', '#ffa07a', '#ff6b9d'],
         orb1: '#ff6b9d',
         orb2: '#ffa07a',
-        particleOpacity: 0.3
+        particleOpacity: 0.3,
+        grainOpacity: 0.03
       },
       morning: {
         name: 'Morning',
@@ -416,7 +421,8 @@
         cta: ['#84fab0', '#66a6ff', '#89f7fe'],
         orb1: '#89f7fe',
         orb2: '#66a6ff',
-        particleOpacity: 0.35
+        particleOpacity: 0.35,
+        grainOpacity: 0.02
       },
       midday: {
         name: 'Midday',
@@ -427,7 +433,8 @@
         cta: ['#43e97b', '#00f2fe', '#4facfe'],
         orb1: '#4facfe',
         orb2: '#00f2fe',
-        particleOpacity: 0.25
+        particleOpacity: 0.25,
+        grainOpacity: 0.02
       },
       afternoon: {
         name: 'Afternoon',
@@ -438,7 +445,8 @@
         cta: ['#fa709a', '#f12711', '#f5af19'],
         orb1: '#f5af19',
         orb2: '#f12711',
-        particleOpacity: 0.35
+        particleOpacity: 0.35,
+        grainOpacity: 0.035
       },
       dusk: {
         name: 'Dusk',
@@ -449,7 +457,8 @@
         cta: ['#7367f0', '#ffb199', '#ff0844'],
         orb1: '#ff0844',
         orb2: '#7367f0',
-        particleOpacity: 0.4
+        particleOpacity: 0.4,
+        grainOpacity: 0.04
       },
       night: {
         name: 'Night',
@@ -460,7 +469,8 @@
         cta: ['#16213e', '#1a1a2e', '#0f0c29'],
         orb1: '#f093fb',
         orb2: '#4facfe',
-        particleOpacity: 0.5
+        particleOpacity: 0.5,
+        grainOpacity: 0.05
       }
     };
 
@@ -481,6 +491,7 @@
       root.style.setProperty('--orb1-color', theme.orb1);
       root.style.setProperty('--orb2-color', theme.orb2);
       root.style.setProperty('--particle-opacity', theme.particleOpacity);
+      root.style.setProperty('--grain-opacity', theme.grainOpacity);
     }
 
     function updateTheme() {
@@ -581,6 +592,69 @@
       requestAnimationFrame(drawParticles);
     }
     requestAnimationFrame(drawParticles);
+
+    // Film Grain Overlay with Theme-Adaptive Intensity
+    (function() {
+      const grainCanvas = document.getElementById('filmGrain');
+      const grainCtx = grainCanvas.getContext('2d');
+
+      // Grain pattern size (2x2 or 3x3 pixels for authentic film look)
+      const grainSize = 2;
+
+      // Check if user prefers reduced motion
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      function resizeGrainCanvas() {
+        grainCanvas.width = window.innerWidth;
+        grainCanvas.height = window.innerHeight;
+      }
+
+      resizeGrainCanvas();
+      window.addEventListener('resize', resizeGrainCanvas);
+
+      function generateGrain() {
+        const imageData = grainCtx.createImageData(grainCanvas.width, grainCanvas.height);
+        const data = imageData.data;
+        const grainOpacity = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--grain-opacity')) || 0.05;
+
+        // Generate random grain pattern
+        for (let i = 0; i < data.length; i += 4) {
+          // Random intensity variation (grayscale)
+          const intensity = Math.random() * 255;
+
+          // Only apply grain to a percentage of pixels for authentic look
+          if (Math.random() < grainOpacity * 2) {
+            data[i] = intensity;     // Red
+            data[i + 1] = intensity; // Green
+            data[i + 2] = intensity; // Blue
+            data[i + 3] = Math.random() * 255 * grainOpacity; // Alpha
+          } else {
+            data[i + 3] = 0; // Fully transparent
+          }
+        }
+
+        return imageData;
+      }
+
+      function drawGrain() {
+        if (!prefersReducedMotion) {
+          // Animated grain - regenerate each frame for "analog film" effect
+          const imageData = generateGrain();
+          grainCtx.putImageData(imageData, 0, 0);
+          requestAnimationFrame(drawGrain);
+        } else {
+          // Static grain for users who prefer reduced motion
+          const imageData = generateGrain();
+          grainCtx.putImageData(imageData, 0, 0);
+        }
+      }
+
+      // Apply blend mode for natural integration
+      grainCanvas.style.mixBlendMode = 'overlay';
+
+      // Start animation
+      drawGrain();
+    })();
 
     // Cursor Trail with Gradient Particles
     (function() {
