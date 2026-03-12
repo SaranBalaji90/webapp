@@ -82,6 +82,38 @@
         opacity: 1;
       }
     }
+    /* Holographic shimmer effect */
+    .card::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      border-radius: 24px;
+      background: conic-gradient(
+        from var(--holographic-angle, 0deg) at var(--holographic-x, 50%) var(--holographic-y, 50%),
+        transparent 0deg,
+        rgba(255, 0, 255, 0.3) 45deg,
+        rgba(0, 255, 255, 0.3) 90deg,
+        rgba(255, 255, 0, 0.3) 135deg,
+        rgba(255, 0, 0, 0.3) 180deg,
+        rgba(0, 255, 0, 0.3) 225deg,
+        rgba(0, 0, 255, 0.3) 270deg,
+        rgba(255, 0, 255, 0.3) 315deg,
+        transparent 360deg
+      );
+      opacity: 0;
+      mix-blend-mode: overlay;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      filter: blur(20px);
+    }
+    @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+      .card:hover::after {
+        opacity: 0.4;
+      }
+    }
     h1 {
       font-size: 3rem;
       background: linear-gradient(90deg, #f093fb, #f5576c, #4facfe);
@@ -151,6 +183,38 @@
     @media (hover: hover) and (pointer: fine) {
       .feature-card:hover::before {
         opacity: 1;
+      }
+    }
+    /* Holographic shimmer effect for feature cards */
+    .feature-card::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      border-radius: 16px;
+      background: conic-gradient(
+        from var(--holographic-angle, 0deg) at var(--holographic-x, 50%) var(--holographic-y, 50%),
+        transparent 0deg,
+        rgba(255, 0, 255, 0.3) 45deg,
+        rgba(0, 255, 255, 0.3) 90deg,
+        rgba(255, 255, 0, 0.3) 135deg,
+        rgba(255, 0, 0, 0.3) 180deg,
+        rgba(0, 255, 0, 0.3) 225deg,
+        rgba(0, 0, 255, 0.3) 270deg,
+        rgba(255, 0, 255, 0.3) 315deg,
+        transparent 360deg
+      );
+      opacity: 0;
+      mix-blend-mode: overlay;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      filter: blur(15px);
+    }
+    @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+      .feature-card:hover::after {
+        opacity: 0.35;
       }
     }
     .feature-icon { font-size: 2.5rem; margin-bottom: 0.8rem; }
@@ -1015,6 +1079,17 @@
             const angle = 135 + percentX * 30 - percentY * 30;
             el.style.setProperty('--shine-angle', `${angle}deg`);
           }
+
+          // Update holographic shimmer effect (moves with mouse)
+          // Calculate angle based on mouse position (0-360 degrees)
+          const holographicAngle = Math.atan2(percentY, percentX) * (180 / Math.PI);
+          // Convert percentages to CSS percentage values (0-100%)
+          const holographicX = 50 + percentX * 50;
+          const holographicY = 50 + percentY * 50;
+
+          el.style.setProperty('--holographic-angle', `${holographicAngle}deg`);
+          el.style.setProperty('--holographic-x', `${holographicX}%`);
+          el.style.setProperty('--holographic-y', `${holographicY}%`);
         });
 
         el.addEventListener('mouseleave', () => {
@@ -1022,6 +1097,10 @@
           // Reset to neutral with spring animation
           el.style.transform = '';
           el.style.boxShadow = '';
+          // Reset holographic effect
+          el.style.removeProperty('--holographic-angle');
+          el.style.removeProperty('--holographic-x');
+          el.style.removeProperty('--holographic-y');
         });
       });
     }
