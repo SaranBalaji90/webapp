@@ -172,10 +172,12 @@
     }
     /* Particles canvas */
     #particles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
-    /* Cursor trail canvas */
-    #cursorTrail { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; }
     /* Meteor canvas */
     #meteors { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; }
+    /* Ripple canvas */
+    #rippleCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 8; pointer-events: none; }
+    /* Cursor trail canvas */
+    #cursorTrail { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; }
     /* Parallax mouse-tracking */
     .parallax-layer { transition: transform 0.15s ease-out; }
     @keyframes shimmer { 0% { background-position: 0%; } 100% { background-position: 200%; } }
@@ -266,6 +268,7 @@
   <div class="progress-bar" id="progressBar"></div>
   <canvas id="particles"></canvas>
   <canvas id="meteors"></canvas>
+  <canvas id="rippleCanvas"></canvas>
   <canvas id="cursorTrail"></canvas>
 
   <section class="hero" id="hero">
@@ -464,19 +467,40 @@
       });
     });
 
-    // Particles
+    // Particles (global for ripple interaction)
     const canvas = document.getElementById('particles'), ctx = canvas.getContext('2d');
-    let particles = [];
+    window.particles = [];
     function resizeCanvas() { canvas.width = innerWidth; canvas.height = innerHeight; }
     resizeCanvas(); addEventListener('resize', resizeCanvas);
-    for (let i = 0; i < 60; i++) particles.push({ x: Math.random() * innerWidth, y: Math.random() * innerHeight, r: Math.random() * 2 + 0.5, dx: (Math.random() - 0.5) * 0.4, dy: (Math.random() - 0.5) * 0.4, baseO: Math.random() * 0.5 + 0.2 });
+    for (let i = 0; i < 60; i++) window.particles.push({ x: Math.random() * innerWidth, y: Math.random() * innerHeight, r: Math.random() * 2 + 0.5, dx: (Math.random() - 0.5) * 0.4, dy: (Math.random() - 0.5) * 0.4, baseO: Math.random() * 0.5 + 0.2 });
     let lastTime = performance.now(), frames = 0, fps = 0;
     function drawParticles(now) {
       frames++;
       if (now - lastTime >= 1000) { fps = frames; frames = 0; lastTime = now; document.getElementById('statFps').textContent = fps; }
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       const themeOpacity = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--particle-opacity')) || 0.5;
-      particles.forEach(p => {
+      window.particles.forEach(p => {
+        // Apply ripple forces if any exist
+        if (window.ripples && window.ripples.length > 0) {
+          window.ripples.forEach(ripple => {
+            const dx = p.x - ripple.x;
+            const dy = p.y - ripple.y;
+            const distance = Math.hypot(dx, dy);
+            // Check if particle is within ripple ring (±30px tolerance)
+            const ringThickness = 30;
+            if (Math.abs(distance - ripple.radius) < ringThickness && ripple.radius > 10) {
+              // Calculate repulsion force
+              const forceMagnitude = (1 - Math.abs(distance - ripple.radius) / ringThickness) * 0.8;
+              const angle = Math.atan2(dy, dx);
+              // Apply force (push particle away)
+              p.dx += Math.cos(angle) * forceMagnitude;
+              p.dy += Math.sin(angle) * forceMagnitude;
+            }
+          });
+          // Dampen velocity
+          p.dx *= 0.95;
+          p.dy *= 0.95;
+        }
         p.x += p.dx; p.y += p.dy;
         if (p.x < 0) p.x = canvas.width; if (p.x > canvas.width) p.x = 0;
         if (p.y < 0) p.y = canvas.height; if (p.y > canvas.height) p.y = 0;
@@ -484,12 +508,12 @@
         ctx.fillStyle = `rgba(255,255,255,${p.baseO * themeOpacity})`; ctx.fill();
       });
       // Draw lines between nearby particles
-      for (let i = 0; i < particles.length; i++)
-        for (let j = i + 1; j < particles.length; j++) {
-          const d = Math.hypot(particles[i].x - particles[j].x, particles[i].y - particles[j].y);
-          if (d < 120) { ctx.beginPath(); ctx.moveTo(particles[i].x, particles[i].y); ctx.lineTo(particles[j].x, particles[j].y); ctx.strokeStyle = `rgba(255,255,255,${0.15 * (1 - d / 120) * themeOpacity})`; ctx.stroke(); }
+      for (let i = 0; i < window.particles.length; i++)
+        for (let j = i + 1; j < window.particles.length; j++) {
+          const d = Math.hypot(window.particles[i].x - window.particles[j].x, window.particles[i].y - window.particles[j].y);
+          if (d < 120) { ctx.beginPath(); ctx.moveTo(window.particles[i].x, window.particles[i].y); ctx.lineTo(window.particles[j].x, window.particles[j].y); ctx.strokeStyle = `rgba(255,255,255,${0.15 * (1 - d / 120) * themeOpacity})`; ctx.stroke(); }
         }
-      document.getElementById('statParticles').textContent = particles.length;
+      document.getElementById('statParticles').textContent = window.particles.length;
       requestAnimationFrame(drawParticles);
     }
     requestAnimationFrame(drawParticles);
@@ -799,6 +823,144 @@
       }
 
       requestAnimationFrame(animateMeteors);
+    })();
+
+    // Interactive Stardust Ripple Effect
+    (function() {
+      // Check if device supports hover (disable on touch devices)
+      const isTouchDevice = !window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+      // Check if user prefers reduced motion
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      // Don't enable ripple effect on touch devices or if user prefers reduced motion
+      if (isTouchDevice || prefersReducedMotion) {
+        return;
+      }
+
+      const rippleCanvas = document.getElementById('rippleCanvas');
+      const rippleCtx = rippleCanvas.getContext('2d');
+      window.ripples = [];
+      const MAX_RIPPLES = 5;
+      const MAX_RADIUS = 400;
+      const RIPPLE_DURATION = 1500; // 1.5 seconds
+
+      // Resize canvas to match window
+      function resizeRippleCanvas() {
+        rippleCanvas.width = innerWidth;
+        rippleCanvas.height = innerHeight;
+      }
+      resizeRippleCanvas();
+      addEventListener('resize', resizeRippleCanvas);
+
+      // Get theme colors from CSS variables
+      function getThemeColors() {
+        const root = getComputedStyle(document.documentElement);
+        const orb1 = root.getPropertyValue('--orb1-color').trim();
+        const orb2 = root.getPropertyValue('--orb2-color').trim();
+        return { orb1, orb2 };
+      }
+
+      // Convert hex color to RGB components
+      function hexToRgb(hex) {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+          r: parseInt(result[1], 16),
+          g: parseInt(result[2], 16),
+          b: parseInt(result[3], 16)
+        } : { r: 255, g: 255, b: 255 };
+      }
+
+      // Handle click events
+      addEventListener('click', (e) => {
+        // Don't interfere with interactive elements
+        if (e.target.closest('button, a, .badge, .section-nav-dot')) {
+          return;
+        }
+
+        // Don't create ripples if we're at max capacity
+        if (window.ripples.length >= MAX_RIPPLES) {
+          // Remove oldest ripple to make room
+          window.ripples.shift();
+        }
+
+        // Get theme colors
+        const colors = getThemeColors();
+        const color1 = hexToRgb(colors.orb1);
+        const color2 = hexToRgb(colors.orb2);
+
+        // Create new ripple
+        window.ripples.push({
+          x: e.clientX,
+          y: e.clientY,
+          radius: 0,
+          maxRadius: MAX_RADIUS,
+          opacity: 1,
+          lifetime: 0,
+          maxLifetime: RIPPLE_DURATION,
+          color1: color1,
+          color2: color2
+        });
+      });
+
+      // Animate ripples
+      let lastRippleTime = performance.now();
+      function animateRipples(now) {
+        const deltaTime = now - lastRippleTime;
+        lastRippleTime = now;
+
+        // Clear canvas
+        rippleCtx.clearRect(0, 0, rippleCanvas.width, rippleCanvas.height);
+
+        // Update and draw ripples
+        for (let i = window.ripples.length - 1; i >= 0; i--) {
+          const r = window.ripples[i];
+
+          // Update lifetime
+          r.lifetime += deltaTime;
+
+          // Remove expired ripples
+          if (r.lifetime >= r.maxLifetime) {
+            window.ripples.splice(i, 1);
+            continue;
+          }
+
+          // Calculate progress (0 to 1)
+          const progress = r.lifetime / r.maxLifetime;
+
+          // Update radius (expand from 0 to maxRadius)
+          r.radius = progress * r.maxRadius;
+
+          // Update opacity (fade from 1 to 0)
+          r.opacity = 1 - progress;
+
+          // Draw ripple ring with gradient
+          rippleCtx.save();
+          rippleCtx.filter = 'blur(4px)';
+
+          // Create gradient from orb1 to orb2
+          const gradient = rippleCtx.createLinearGradient(
+            r.x - r.radius, r.y - r.radius,
+            r.x + r.radius, r.y + r.radius
+          );
+          gradient.addColorStop(0, `rgba(${r.color1.r}, ${r.color1.g}, ${r.color1.b}, ${r.opacity * 0.8})`);
+          gradient.addColorStop(0.5, `rgba(${Math.round((r.color1.r + r.color2.r) / 2)}, ${Math.round((r.color1.g + r.color2.g) / 2)}, ${Math.round((r.color1.b + r.color2.b) / 2)}, ${r.opacity * 0.6})`);
+          gradient.addColorStop(1, `rgba(${r.color2.r}, ${r.color2.g}, ${r.color2.b}, ${r.opacity * 0.8})`);
+
+          // Draw ring (hollow circle)
+          rippleCtx.beginPath();
+          rippleCtx.arc(r.x, r.y, r.radius, 0, Math.PI * 2);
+          rippleCtx.strokeStyle = gradient;
+          rippleCtx.lineWidth = 3;
+          rippleCtx.stroke();
+
+          rippleCtx.restore();
+        }
+
+        requestAnimationFrame(animateRipples);
+      }
+
+      requestAnimationFrame(animateRipples);
     })();
 
     // 3D Tilt Effect for Cards (Progressive Enhancement)
